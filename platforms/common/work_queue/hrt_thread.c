@@ -117,7 +117,7 @@ static void hrt_work_process(void)
 {
 	struct wqueue_s *wqueue = &g_hrt_work;
 	volatile struct work_s *work;
-	worker_t  worker;
+	worker_t worker;
 	void *arg;
 	uint64_t elapsed;
 	uint32_t remaining;
@@ -128,7 +128,7 @@ static void hrt_work_process(void)
 	pthread_setname_np("HRT");
 #else
 	// The Linux headers do not actually contain this
-	//rv = pthread_setname_np(pthread_self(), "HRT");
+	// rv = pthread_setname_np(pthread_self(), "HRT");
 #endif
 
 	/* Then process queued work.  We need to keep interrupts disabled while
@@ -136,7 +136,7 @@ static void hrt_work_process(void)
 	 */
 
 	/* Default to sleeping for 1 sec */
-	next  = 1000000;
+	next = 1000000;
 
 #ifdef __PX4_QURT
 	// In Posix certain signals wake up a sleeping thread but it isn't the case
@@ -150,9 +150,10 @@ static void hrt_work_process(void)
 
 	hrt_work_lock();
 
-	work  = (struct work_s *)wqueue->q.head;
+	work = (struct work_s *)wqueue->q.head;
 
-	while (work) {
+	while (work)
+	{
 		/* Is this work ready?  It is ready if there is no delay or if
 		 * the delay has elapsed. qtime is the time that the work was added
 		 * to the work queue.  It will always be greater than or equal to
@@ -161,19 +162,20 @@ static void hrt_work_process(void)
 
 		elapsed = hrt_absolute_time() - work->qtime;
 
-		//PX4_INFO("hrt work_process: in usec elapsed=%lu delay=%u work=%p", elapsed, work->delay, work);
-		if (elapsed >= work->delay) {
+		// PX4_INFO("hrt work_process: in usec elapsed=%lu delay=%u work=%p", elapsed, work->delay, work);
+		if (elapsed >= work->delay)
+		{
 			/* Remove the ready-to-execute work from the list */
 
 			(void)dq_rem((dq_entry_t *)&work->dq, &wqueue->q);
-			//PX4_INFO("Dequeued work=%p", work);
+			// PX4_INFO("Dequeued work=%p", work);
 
 			/* Extract the work description from the entry (in case the work
 			 * instance by the re-used after it has been de-queued).
 			 */
 
 			worker = work->worker;
-			arg    = work->arg;
+			arg = work->arg;
 
 			/* Mark the work as no longer being queued */
 
@@ -185,10 +187,12 @@ static void hrt_work_process(void)
 
 			hrt_work_unlock();
 
-			if (!worker) {
+			if (!worker)
+			{
 				PX4_ERR("MESSED UP: worker = 0");
-
-			} else {
+			}
+			else
+			{
 				worker(arg);
 			}
 
@@ -198,9 +202,10 @@ static void hrt_work_process(void)
 			 */
 
 			hrt_work_lock();
-			work  = (struct work_s *)wqueue->q.head;
-
-		} else {
+			work = (struct work_s *)wqueue->q.head;
+		}
+		else
+		{
 			/* This one is not ready.. will it be ready before the next
 			 * scheduled wakeup interval?
 			 */
@@ -208,8 +213,9 @@ static void hrt_work_process(void)
 			/* Here: elapsed < work->delay */
 			remaining = work->delay - elapsed;
 
-			//PX4_INFO("remaining=%u delay=%u elapsed=%lu", remaining, work->delay, elapsed);
-			if (remaining < next) {
+			// PX4_INFO("remaining=%u delay=%u elapsed=%lu", remaining, work->delay, elapsed);
+			if (remaining < next)
+			{
 				/* Yes.. Then schedule to wake up when the work is ready */
 
 				next = remaining;
@@ -218,7 +224,7 @@ static void hrt_work_process(void)
 			/* Then try the next in the list. */
 
 			work = (struct work_s *)work->dq.flink;
-			//PX4_INFO("next %u work %p", next, work);
+			// PX4_INFO("next %u work %p", next, work);
 		}
 	}
 
@@ -228,7 +234,7 @@ static void hrt_work_process(void)
 	hrt_work_unlock();
 
 	/* might sleep less if a signal received and new item was queued */
-	//PX4_INFO("Sleeping for %u usec", next);
+	// PX4_INFO("Sleeping for %u usec", next);
 	px4_usleep(next);
 }
 
@@ -261,7 +267,8 @@ static int work_hrtthread(int argc, char *argv[])
 {
 	/* Loop forever */
 
-	for (;;) {
+	for (;;)
+	{
 		/* First, perform garbage collection.  This cleans-up memory de-allocations
 		 * that were queued because they could not be freed in that execution
 		 * context (for example, if the memory was freed from an interrupt handler).
@@ -290,12 +297,11 @@ void hrt_work_queue_init(void)
 
 	// Create high priority worker thread
 	g_hrt_work.pid = px4_task_spawn_cmd("wkr_hrt",
-					    SCHED_DEFAULT,
-					    SCHED_PRIORITY_MAX,
-					    2000,
-					    work_hrtthread,
-					    (char *const *)NULL);
-
+										SCHED_DEFAULT,
+										SCHED_PRIORITY_MAX,
+										2000,
+										work_hrtthread,
+										(char *const *)NULL);
 
 	signal(SIGCONT, _sighandler);
 }
